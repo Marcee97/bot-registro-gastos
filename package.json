@@ -2,20 +2,17 @@
   "name": "contador",
   "version": "1.0.0",
   "description": "habitos",
-  "main": "main.js",
+  "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "electron ."
+    "start": "node index.js",
+    "dev": "node --watch index.js"
   },
   "keywords": [],
   "author": "marcee97",
   "license": "ISC",
   "type": "commonjs",
-  "devDependencies": {
-    "electron": "^40.4.1"
-  },
   "dependencies": {
-    "better-sqlite3": "^12.6.2",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "groq-sdk": "^0.37.0",
