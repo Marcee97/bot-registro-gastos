@@ -5,7 +5,7 @@ const pool = mysql.createPool({
 host: 'localhost',
 user:'root',
 password:'redondos86',
-database:'bot_gastos'
+database:'bot_registro_gastos'
 })
 
 

@@ -30,13 +30,18 @@ Si encontrás una compra, respondé SOLO con este JSON:
 Si el mensaje NO tiene nada que ver con una compra, respondé SOLO:
 {"esCompra": false}
 
-IMPORTANTE: solo JSON, sin texto extra, sin markdown, sin backticks.`,
+IMPORTANTE: solo JSON, sin texto extra, sin markdown, sin backticks.
+
+
+otra cosa si te pide ver los `,
       },
       { role: "user", content: mensaje },
     ],
     temperature: 0,
     max_tokens: 150,
   });
+
+  
 
   const texto = response.choices[0].message.content
     .trim()
@@ -64,10 +69,13 @@ const generarRespuesta = async (numeroCliente, mensaje) => {
         (sum, i) => sum + i.precio * i.cantidad,
         0
       );
-      const [resultadoDB] = await pool.execute(
-        "INSERT INTO gastos (producto, cantidad, precio) VALUES (?, ?, ?)", [compra.items[0].producto, compra.items[0].cantidad, compra.items[0].precio]
-      )
-      console.log("aca deberia guardar en base de datos", resultadoDB)
+for (const item of compra.items) {
+  await pool.execute(
+    "INSERT INTO gastos (producto, cantidad, precio) VALUES (?, ?, ?)",
+    [item.producto, item.cantidad, item.precio]
+  );
+}
+      console.log("aca deberia guardar en base de datos")
 
       contextoCompra = `El usuario registró una compra. Confirmale brevemente que se guardó:
 ${compra.items.map((i) => `- ${i.producto}: $${i.precio} x${i.cantidad}`).join("\n")}
