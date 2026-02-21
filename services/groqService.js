@@ -1,6 +1,7 @@
 // services/groqService.js
 const Groq = require("groq-sdk");
 const dotenv = require("dotenv");
+const { pool } = require("../database/config.js");
 dotenv.config();
 
 const groq = new Groq({
@@ -63,6 +64,10 @@ const generarRespuesta = async (numeroCliente, mensaje) => {
         (sum, i) => sum + i.precio * i.cantidad,
         0
       );
+      const [resultadoDB] = await pool.execute(
+        "INSERT INTO gastos (producto, cantidad, precio) VALUES (?, ?, ?)", [compra.items[0].producto, compra.items[0].cantidad, compra.items[0].precio]
+      )
+      console.log("aca deberia guardar en base de datos", resultadoDB)
 
       contextoCompra = `El usuario registró una compra. Confirmale brevemente que se guardó:
 ${compra.items.map((i) => `- ${i.producto}: $${i.precio} x${i.cantidad}`).join("\n")}
@@ -70,7 +75,7 @@ Total: $${total}
 Respondé solo con una confirmación corta y amigable, sin hacer preguntas.`;
     }
   } catch (e) {
-    console.log("❌ No se pudo parsear como compra");
+    console.log("❌ No se pudo parsear como compra", e.message);
   }
 
   conversaciones[numeroCliente].push({
