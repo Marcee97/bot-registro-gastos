@@ -30,18 +30,13 @@ Si encontrás una compra, respondé SOLO con este JSON:
 Si el mensaje NO tiene nada que ver con una compra, respondé SOLO:
 {"esCompra": false}
 
-IMPORTANTE: solo JSON, sin texto extra, sin markdown, sin backticks.
-
-
-otra cosa si te pide ver los `,
+IMPORTANTE: solo JSON, sin texto extra, sin markdown, sin backticks.`,
       },
       { role: "user", content: mensaje },
     ],
     temperature: 0,
     max_tokens: 150,
   });
-
-  
 
   const texto = response.choices[0].message.content
     .trim()
@@ -52,11 +47,86 @@ otra cosa si te pide ver los `,
   return JSON.parse(texto);
 };
 
+const consultarGastos = (mensaje) => {
+  const keywords = [
+    "gasto",
+    "gastos",
+    "cuánto gasté",
+    "cuanto gasté",
+    "total gastado",
+    "total gasto",
+    "últimos gastos",
+    "ultimos gastos",
+    "mis gastos",
+    "ver gastos",
+    "total"
+  ];
+  const mensajeNormalizado = mensaje.toLowerCase().trim();
+  return keywords.some((keyword) => mensajeNormalizado.includes(keyword));
+};
+
+// ← ACTUALIZADO: Usar DATE_FORMAT y renombrar a fecha_formateada
+const obtenerUltimosGastos = async () => {
+  try {
+    const [rows] = await pool.execute(
+      `SELECT 
+        producto, 
+        cantidad, 
+        precio, 
+        DATE_FORMAT(fecha, '%d/%m') as fecha_formateada
+       FROM gastos 
+       ORDER BY fecha DESC 
+       LIMIT 5`
+    );
+
+    if (rows.length === 0) {
+      return null;
+    }
+    return rows;
+  } catch (error) {
+    console.error("❌ Error al obtener últimos gastos:", error);
+    return null;
+  }
+};
+
 const generarRespuesta = async (numeroCliente, mensaje) => {
   if (!conversaciones[numeroCliente]) {
     conversaciones[numeroCliente] = [];
   }
 
+  // Verificar si pide ver gastos
+  if (consultarGastos(mensaje)) {
+    const gastos = await obtenerUltimosGastos();
+
+    if (!gastos) {
+      return {
+        respuesta: "No tenés gastos registrados todavía.",
+        tokens: 0,
+        compra: null
+      };
+    }
+
+    let respuesta = "📋 *Tus últimos 5 gastos:*\n\n";
+   
+    // ← ACTUALIZADO: Usar gasto.fecha_formateada en lugar de fecha_creacion
+    gastos.forEach((gasto, index) => {
+      const precioFormateado = parseFloat(gasto.precio).toFixed(0);
+      
+      respuesta += `${index + 1}. ${gasto.producto}`;
+      if (gasto.cantidad > 1) {
+        respuesta += ` (x${gasto.cantidad})`;
+      }
+      respuesta += ` - $${precioFormateado} - ${gasto.fecha_formateada}\n`;
+    });
+
+    return {
+      respuesta,
+      tokens: 0,
+      compra: null
+    };
+  }
+
+  // Detectar y guardar compras
   let contextoCompra = "";
   let compraDetectada = null;
 
@@ -64,18 +134,20 @@ const generarRespuesta = async (numeroCliente, mensaje) => {
     const compra = await extraerCompra(mensaje);
     if (compra.esCompra && compra.items?.length > 0) {
       compraDetectada = compra;
-      
+
       const total = compra.items.reduce(
         (sum, i) => sum + i.precio * i.cantidad,
         0
       );
-for (const item of compra.items) {
-  await pool.execute(
-    "INSERT INTO gastos (producto, cantidad, precio) VALUES (?, ?, ?)",
-    [item.producto, item.cantidad, item.precio]
-  );
-}
-      console.log("aca deberia guardar en base de datos")
+
+      for (const item of compra.items) {
+        await pool.execute(
+          "INSERT INTO gastos (producto, cantidad, precio) VALUES (?, ?, ?)",
+          [item.producto, item.cantidad, item.precio]
+        );
+      }
+      
+      console.log("✅ Compra guardada en base de datos");
 
       contextoCompra = `El usuario registró una compra. Confirmale brevemente que se guardó:
 ${compra.items.map((i) => `- ${i.producto}: $${i.precio} x${i.cantidad}`).join("\n")}
@@ -83,7 +155,7 @@ Total: $${total}
 Respondé solo con una confirmación corta y amigable, sin hacer preguntas.`;
     }
   } catch (e) {
-    console.log("❌ No se pudo parsear como compra", e.message);
+    console.log("❌ No se pudo parsear como compra:", e.message);
   }
 
   conversaciones[numeroCliente].push({
@@ -105,7 +177,7 @@ Respondé solo con una confirmación corta y amigable, sin hacer preguntas.`;
       { role: "system", content: systemPrompt },
       ...conversaciones[numeroCliente],
     ],
-    temperature: 0.5,
+    temperature: 0.4,
     max_tokens: 150,
   });
 
