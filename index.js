@@ -1,14 +1,17 @@
 // index.js
 const express = require("express");
 const dotenv = require("dotenv");
+const cors = require('cors');
 dotenv.config();
+
+
 
 const app = express();
 
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-
+app.use(cors())
 // Importar rutas
 const whatsappRoutes = require("./routes/whatsappRoutes.js");
 

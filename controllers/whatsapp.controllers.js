@@ -21,6 +21,7 @@ const handleIncomingMessage = async (req, res) => {
         console.log(`  Producto: ${item.producto}`);
         console.log(`  Precio: $${item.precio}`);
         console.log(`  Cantidad: ${item.cantidad}`);
+        console.log(`  Categoría: ${item.categoria}`);
       });
       const total = resultado.compra.items.reduce(
         (sum, i) => sum + i.precio * i.cantidad,

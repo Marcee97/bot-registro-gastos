@@ -16,7 +16,8 @@ const extraerCompra = async (mensaje) => {
     messages: [
       {
         role: "system",
-        content: `Analizá si el mensaje habla de una compra, gasto o precio de algún producto o servicio.
+        content: `Analizá si el mensaje habla de una compra, gasto o precio.
+
 Ejemplos que SÍ son compras:
 - "compré pan por 2500"
 - "gasté 1200 en aceite"
@@ -24,13 +25,43 @@ Ejemplos que SÍ son compras:
 - "compre 2 gaseosas a 800 cada una"
 - "pan 2500, leche 900"
 
-Si encontrás una compra, respondé SOLO con este JSON:
-{"esCompra": true, "items": [{"producto": "nombre del producto", "precio": 1234, "cantidad": 1}]}
+CATEGORÍAS PERMITIDAS:
+- supermercado
+- transporte
+- comida_fuera
+- gastos_fijos
+- ocio
+- otros
 
-Si el mensaje NO tiene nada que ver con una compra, respondé SOLO:
+Asigná la categoría más adecuada según el producto:
+- alimentos, bebidas, vegetales, productos de limpieza, productos de higiene personal → supermercado
+- taxi, colectivo, nafta, uber, didi → transporte
+- restaurante, bar → comida_fuera
+- luz, agua, internet, gas, alquiler, expensas → gastos_fijos
+- cine, juegos → ocio
+- si no sabés → otros
+
+Si encontrás una compra, respondé SOLO con este JSON:
+{
+  "esCompra": true,
+  "items": [
+    {
+      "producto": "nombre",
+      "precio": 1234,
+      "cantidad": 1,
+      "categoria": "una de las categorías permitidas"
+    }
+  ]
+}
+
+Si NO es una compra:
 {"esCompra": false}
 
-IMPORTANTE: solo JSON, sin texto extra, sin markdown, sin backticks.`,
+IMPORTANTE:
+- Solo JSON
+- No texto extra
+- No markdown
+- No backticks`,
       },
       { role: "user", content: mensaje },
     ],
@@ -142,15 +173,15 @@ const generarRespuesta = async (numeroCliente, mensaje) => {
 
       for (const item of compra.items) {
         await pool.execute(
-          "INSERT INTO gastos (producto, cantidad, precio) VALUES (?, ?, ?)",
-          [item.producto, item.cantidad, item.precio]
+          "INSERT INTO gastos (producto, cantidad, precio, categoria) VALUES (?, ?, ?, ?)",
+          [item.producto, item.cantidad, item.precio, item.categoria]
         );
       }
       
       console.log("✅ Compra guardada en base de datos");
 
       contextoCompra = `El usuario registró una compra. Confirmale brevemente que se guardó:
-${compra.items.map((i) => `- ${i.producto}: $${i.precio} x${i.cantidad}`).join("\n")}
+${compra.items.map((i) => `- ${i.producto}: $${i.precio} x${i.cantidad} (${i.categoria})`).join("\n")}
 Total: $${total}
 Respondé solo con una confirmación corta y amigable, sin hacer preguntas.`;
     }
